@@ -20,6 +20,9 @@ apply plugin: 'eclipse'
 group = 'ascelion.public'
 version = scmVersion.version
 
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
+
 dependencies {
 	compileOnly 'javax.enterprise:cdi-api:1.1'
 }
