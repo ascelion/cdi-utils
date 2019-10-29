@@ -1,23 +1,29 @@
 
 package ascelion.cdi.metadata;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.enterprise.inject.spi.AnnotatedCallable;
 import javax.enterprise.inject.spi.AnnotatedParameter;
 
-import lombok.Getter;
+import static java.util.Collections.unmodifiableList;
 
-abstract class AnnotatedCallableImpl<I extends AnnotatedCallable<X>, X> extends AnnotatedMemberImpl<I, X> implements AnnotatedCallable<X> {
+abstract class AnnotatedCallableImpl<A extends AnnotatedCallable<X>, X> extends AnnotatedMemberImpl<A, X> implements AnnotatedCallable<X> {
 
-	@Getter
-	private final List<AnnotatedParameter<X>> parameters;
+	final List<AnnotatedParameterImpl<X>> parameters = new ArrayList<>();
 
-	AnnotatedCallableImpl(I delegate) {
+	AnnotatedCallableImpl(A delegate) {
 		super(delegate);
 
-		this.parameters = delegate.getParameters().stream().map(AnnotatedParameterImpl::new).collect(Collectors.toList());
+		delegate.getParameters()
+				.stream()
+				.map(AnnotatedParameterImpl::new)
+				.forEach(this.parameters::add);
 	}
 
+	@Override
+	public List<AnnotatedParameter<X>> getParameters() {
+		return unmodifiableList(this.parameters);
+	}
 }

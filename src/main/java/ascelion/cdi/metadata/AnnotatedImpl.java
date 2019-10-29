@@ -8,17 +8,21 @@ import java.util.Set;
 
 import javax.enterprise.inject.spi.Annotated;
 
-import lombok.Getter;
+import static java.util.Collections.unmodifiableSet;
 
-abstract class AnnotatedImpl<I extends Annotated> implements Annotated {
+abstract class AnnotatedImpl<A extends Annotated> implements Annotated {
 
-	final I delegate;
-	@Getter
+	final A delegate;
 	final Set<Annotation> annotations;
 
-	AnnotatedImpl(I delegate) {
+	AnnotatedImpl(A delegate) {
 		this.delegate = delegate;
 		this.annotations = new LinkedHashSet<>(delegate.getAnnotations());
+	}
+
+	@Override
+	public Set<Annotation> getAnnotations() {
+		return unmodifiableSet(this.annotations);
 	}
 
 	@Override
@@ -42,19 +46,12 @@ abstract class AnnotatedImpl<I extends Annotated> implements Annotated {
 
 	@Override
 	public final boolean isAnnotationPresent(Class<? extends Annotation> annotationType) {
-		return this.annotations.stream().anyMatch(a -> a.annotationType() == annotationType);
+		return this.annotations.stream()
+				.anyMatch(a -> a.annotationType() == annotationType);
 	}
 
 	@Override
 	public final String toString() {
 		return "[ATM] " + this.delegate;
-	}
-
-	final void add(Annotation a) {
-		this.annotations.add(a);
-	}
-
-	final void remove(Class<? extends Annotation> t) {
-		this.annotations.removeIf(a -> a.annotationType() == t);
 	}
 }

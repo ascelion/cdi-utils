@@ -7,6 +7,8 @@ import java.util.Set;
 
 import javax.enterprise.inject.spi.BeanAttributes;
 
+import static java.util.Collections.unmodifiableSet;
+
 class BeanAttributesImpl<T> implements BeanAttributes<T> {
 
 	private final BeanAttributes<T> delegate;
@@ -22,12 +24,12 @@ class BeanAttributesImpl<T> implements BeanAttributes<T> {
 
 	@Override
 	public Set<Type> getTypes() {
-		return this.types;
+		return unmodifiableSet(this.types);
 	}
 
 	@Override
 	public Set<Annotation> getQualifiers() {
-		return this.qualifiers;
+		return unmodifiableSet(this.qualifiers);
 	}
 
 	@Override
@@ -42,11 +44,19 @@ class BeanAttributesImpl<T> implements BeanAttributes<T> {
 
 	@Override
 	public Set<Class<? extends Annotation>> getStereotypes() {
-		return this.delegate.getStereotypes();
+		return unmodifiableSet(this.delegate.getStereotypes());
 	}
 
 	@Override
 	public boolean isAlternative() {
 		return this.delegate.isAlternative();
+	}
+
+	Set<Type> types() {
+		return this.types;
+	}
+
+	Set<Annotation> qualifiers() {
+		return this.qualifiers;
 	}
 }

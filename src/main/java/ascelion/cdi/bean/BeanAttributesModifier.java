@@ -21,22 +21,30 @@ public class BeanAttributesModifier<X> {
 
 	abstract class ModifierImpl implements Modifier<X> {
 		@Override
-		public BeanAttributesModifier<X> and() {
+		public final BeanAttributesModifier<X> and() {
 			return BeanAttributesModifier.this;
 		}
 	}
 
 	public interface Qualifiers<X> extends Modifier<X> {
+		Qualifiers<X> clear();
+
 		Qualifiers<X> add(Annotation annotation, Annotation... annotations);
 
 		Qualifiers<X> remove(Annotation annotation, Annotation... annotations);
 
-		@SuppressWarnings("unchecked")
 		Qualifiers<X> remove(Class<? extends Annotation> type, Class<? extends Annotation>... types);
 	}
 
 	class QualifiersImpl extends ModifierImpl implements Qualifiers<X> {
-		final Set<Annotation> qualifiers = and().attributes.getQualifiers();
+		final Set<Annotation> qualifiers = and().attributes.qualifiers();
+
+		@Override
+		public Qualifiers<X> clear() {
+			this.qualifiers.clear();
+
+			return this;
+		}
 
 		@Override
 		public Qualifiers<X> add(Annotation annotation, Annotation... annotations) {
@@ -66,6 +74,8 @@ public class BeanAttributesModifier<X> {
 	};
 
 	public interface Types<X> extends Modifier<X> {
+		Types<X> clear();
+
 		Types<X> add(Type type, Type... types);
 
 		Types<X> addAll(Collection<Type> types);
@@ -76,7 +86,14 @@ public class BeanAttributesModifier<X> {
 	}
 
 	class TypesImpl extends ModifierImpl implements Types<X> {
-		final Set<Type> types = and().attributes.getTypes();
+		final Set<Type> types = and().attributes.types();
+
+		@Override
+		public Types<X> clear() {
+			this.types.clear();
+
+			return this;
+		}
 
 		@Override
 		public Types<X> add(Type type, Type... types) {

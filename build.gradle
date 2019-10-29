@@ -17,8 +17,18 @@ apply plugin: 'pl.allegro.tech.build.axion-release'
 apply plugin: 'java'
 apply plugin: 'eclipse'
 
+scmVersion {
+	ignoreUncommittedChanges = false
+}
+
 group = 'ascelion.public'
 version = scmVersion.version
+
+ext {
+	publishName = rootProject.name
+	publishBase = 'https://github.com/ascelion'
+	publishRepo = 'git@github.com:ascelion'
+}
 
 sourceCompatibility = '1.8'
 targetCompatibility = '1.8'

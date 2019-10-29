@@ -8,20 +8,23 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Set;
 
+import javax.enterprise.inject.spi.Annotated;
 import javax.enterprise.inject.spi.AnnotatedCallable;
 import javax.enterprise.inject.spi.AnnotatedConstructor;
 import javax.enterprise.inject.spi.AnnotatedField;
 import javax.enterprise.inject.spi.AnnotatedMethod;
+import javax.enterprise.inject.spi.AnnotatedParameter;
 import javax.enterprise.inject.spi.AnnotatedType;
 
 import ascelion.cdi.literal.NonbindingLiteral;
 import ascelion.cdi.literal.QualifierLiteral;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.unmodifiableSet;
 
 import lombok.RequiredArgsConstructor;
 
-public final class AnnotatedTypeModifier<T> {
+public final class AnnotatedTypeModifier<X> {
 	static public <A extends Annotation> AnnotatedType<A> makeQualifier(AnnotatedType<A> type, String... bindings) {
 		final AnnotatedTypeModifier<A> mod = AnnotatedTypeModifier.create(type);
 
@@ -29,11 +32,9 @@ public final class AnnotatedTypeModifier<T> {
 
 		final List<String> filter = asList(bindings);
 
-		mod.type.getMethods()
-				.stream()
+		mod.type.methods.stream()
 				.filter(m -> !filter.contains(m.getJavaMember().getName()))
-				.map(AnnotatedMethodImpl.class::cast)
-				.forEach(m -> m.add(NonbindingLiteral.INSTANCE));
+				.forEach(m -> m.annotations.add(NonbindingLiteral.INSTANCE));
 
 		return mod.get();
 	}
@@ -42,109 +43,138 @@ public final class AnnotatedTypeModifier<T> {
 		return new AnnotatedTypeModifier<>(type);
 	}
 
-	public interface Modifier<T> {
-		Modifier<T> add(Annotation a);
-
-		Modifier<T> remove(Class<? extends Annotation> a);
-
-		AnnotatedTypeModifier<T> and();
+	public interface Modifier<X> {
+		AnnotatedTypeModifier<X> and();
 	}
 
-	@RequiredArgsConstructor
-	class ModifierImpl implements Modifier<T> {
-		final AnnotatedImpl<?> annotated;
-
+	abstract class ModifierImpl implements Modifier<X> {
 		@Override
-		public Modifier<T> add(Annotation a) {
-			this.annotated.add(a);
-
-			return this;
-		}
-
-		@Override
-		public Modifier<T> remove(Class<? extends Annotation> t) {
-			this.annotated.remove(t);
-
-			return this;
-		}
-
-		@Override
-		public AnnotatedTypeModifier<T> and() {
+		public final AnnotatedTypeModifier<X> and() {
 			return AnnotatedTypeModifier.this;
 		}
 	}
 
-	private final AnnotatedTypeImpl<T> type;
+	public interface Annotations<X, A extends Annotated> extends Modifier<X> {
+		A get();
 
-	private AnnotatedTypeModifier(AnnotatedType<T> type) {
+		Annotations<X, A> add(Annotation a);
+
+		Annotations<X, A> remove(Class<? extends Annotation> a);
+
+		Annotations<X, A> clear();
+	}
+
+	@RequiredArgsConstructor
+	class AnnotationsImpl<A extends Annotated> extends ModifierImpl implements Annotations<X, A> {
+		final AnnotatedImpl<A> annotated;
+
+		@Override
+		public A get() {
+			return (A) this.annotated;
+		}
+
+		@Override
+		public Annotations<X, A> add(Annotation a) {
+			this.annotated.annotations.add(a);
+
+			return this;
+		}
+
+		@Override
+		public Annotations<X, A> remove(Class<? extends Annotation> t) {
+			this.annotated.annotations.removeIf(a -> a.annotationType() == t);
+
+			return this;
+		}
+
+		@Override
+		public Annotations<X, A> clear() {
+			this.annotated.annotations.clear();
+
+			return this;
+		}
+
+		@Override
+		public String toString() {
+			return this.annotated.toString();
+		}
+
+	}
+
+	private final AnnotatedTypeImpl<X> type;
+
+	private AnnotatedTypeModifier(AnnotatedType<X> type) {
 		this.type = new AnnotatedTypeImpl<>(type);
 	}
 
-	public Modifier<T> type() {
-		return new ModifierImpl(this.type);
+	public Annotations<X, AnnotatedType<X>> type() {
+		return new AnnotationsImpl<>(this.type);
 	}
 
-	public Set<AnnotatedConstructor<T>> getConstructors() {
-		return this.type.getConstructors();
+	public Set<AnnotatedConstructor<X>> getConstructors() {
+		return unmodifiableSet(this.type.constructors);
 	}
 
-	public Set<AnnotatedMethod<? super T>> getMethods() {
-		return this.type.getMethods();
+	public Set<AnnotatedMethod<X>> getMethods() {
+		return unmodifiableSet(this.type.methods);
 	}
 
-	public Set<AnnotatedCallable<? super T>> getCallables() {
-		return this.type.getCallables();
+	public Set<AnnotatedCallable<X>> getCallables() {
+		return unmodifiableSet(this.type.callables);
 	}
 
-	public Set<AnnotatedField<? super T>> getFields() {
-		return this.type.getFields();
+	public Set<AnnotatedField<X>> getFields() {
+		return unmodifiableSet(this.type.fields);
 	}
 
-	public Modifier<T> executable(Executable executable) {
-		return new ModifierImpl((AnnotatedImpl<?>) this.type.getExecutable(executable));
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public Annotations<X, AnnotatedCallable<X>> executable(Executable executable) {
+		final AnnotatedCallableImpl<?, X> x = this.type.executable(executable);
+
+		return new AnnotationsImpl(x);
 	}
 
-	public Modifier<T> executableParam(Executable executable, int index) {
-		return new ModifierImpl((AnnotatedImpl<?>) this.type.getExecutable(executable).getParameters().get(index));
+	public Annotations<X, AnnotatedParameter<X>> executableParam(Executable executable, int index) {
+		return new AnnotationsImpl<>(this.type.executable(executable).parameters.get(index));
 	}
 
-	public Modifier<T> constructor(Constructor<T> constructor) {
-		return new ModifierImpl((AnnotatedImpl<?>) this.type.getConstructor(constructor));
+	public Annotations<X, AnnotatedConstructor<X>> constructor(Constructor<X> constructor) {
+		return new AnnotationsImpl<>(this.type.constructor(constructor));
 	}
 
-	public Modifier<T> constructor(Class<?>... types) {
-		return new ModifierImpl((AnnotatedImpl<?>) this.type.getConstructor(types));
+	public Annotations<X, AnnotatedConstructor<X>> constructor(Class<?>... types) {
+		return new AnnotationsImpl<>(this.type.constructor(types));
 	}
 
-	public Modifier<T> constructorParam(int index, Class<?>... types) {
-		return new ModifierImpl((AnnotatedImpl<?>) this.type.getConstructor(types).getParameters().get(index));
+	public Annotations<X, AnnotatedParameter<X>> constructorParam(int index, Class<?>... types) {
+		return new AnnotationsImpl<>(this.type.constructor(types).parameters.get(index));
 	}
 
-	public Modifier<T> method(Method method) {
-		return new ModifierImpl((AnnotatedImpl<?>) this.type.getMethod(method));
+	public Annotations<X, AnnotatedMethod<X>> method(Method method) {
+		return new AnnotationsImpl<>(this.type.method(method));
 	}
 
-	public Modifier<T> method(String name, Class<?>... types) {
-		return new ModifierImpl((AnnotatedImpl<?>) this.type.getMethod(name, types));
+	public Annotations<X, AnnotatedMethod<X>> method(String name, Class<?>... types) {
+		return new AnnotationsImpl<>(this.type.method(name, types));
 	}
 
-	public Modifier<T> methodParam(String name, int index, Class<?>... types) {
-		return new ModifierImpl((AnnotatedImpl<?>) this.type.getMethod(name, types).getParameters().get(index));
+	public Annotations<X, AnnotatedParameter<X>> methodParam(String name, int index, Class<?>... types) {
+		return new AnnotationsImpl<>(this.type.method(name, types).parameters.get(index));
 	}
 
-	public Modifier<T> field(AnnotatedField<? super T> field) {
-		return new ModifierImpl((AnnotatedImpl<?>) this.type.getField(field.getJavaMember()));
+	public Annotations<X, AnnotatedField<X>> field(AnnotatedField<? super X> field) {
+		return new AnnotationsImpl<>(this.type.field(field.getJavaMember()));
 	}
 
-	public Modifier<T> field(Field field) {
-		return new ModifierImpl((AnnotatedImpl<?>) this.type.getField(field));
+	public Annotations<X, AnnotatedField<X>> field(Field field) {
+		return new AnnotationsImpl<>(this.type.field(field));
 	}
 
-	public Modifier<T> field(String name) {
-		return new ModifierImpl((AnnotatedImpl<?>) this.type.getField(name));
+	public Annotations<X, AnnotatedField<X>> field(String name) {
+		return new AnnotationsImpl<>(this.type.field(name));
 	}
 
-	public AnnotatedType<T> get() {
+	public AnnotatedType<X> get() {
 		return this.type;
 	}
 }

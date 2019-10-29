@@ -4,9 +4,9 @@ package ascelion.cdi.metadata;
 import javax.enterprise.inject.spi.AnnotatedMember;
 import javax.enterprise.inject.spi.AnnotatedType;
 
-abstract class AnnotatedMemberImpl<I extends AnnotatedMember<X>, X> extends AnnotatedImpl<I> implements AnnotatedMember<X> {
+abstract class AnnotatedMemberImpl<A extends AnnotatedMember<X>, X> extends AnnotatedImpl<A> implements AnnotatedMember<X> {
 
-	AnnotatedMemberImpl(I delegate) {
+	AnnotatedMemberImpl(A delegate) {
 		super(delegate);
 	}
 
