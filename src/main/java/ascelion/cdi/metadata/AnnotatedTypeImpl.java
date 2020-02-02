@@ -1,6 +1,10 @@
 
 package ascelion.cdi.metadata;
 
+import static java.lang.String.format;
+import static java.util.Collections.unmodifiableSet;
+import static java.util.stream.Collectors.joining;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
@@ -15,10 +19,6 @@ import javax.enterprise.inject.spi.AnnotatedConstructor;
 import javax.enterprise.inject.spi.AnnotatedField;
 import javax.enterprise.inject.spi.AnnotatedMethod;
 import javax.enterprise.inject.spi.AnnotatedType;
-
-import static java.lang.String.format;
-import static java.util.Collections.unmodifiableSet;
-import static java.util.stream.Collectors.joining;
 
 @SuppressWarnings("unchecked")
 final class AnnotatedTypeImpl<X> extends AnnotatedImpl<AnnotatedType<X>> implements AnnotatedType<X> {
@@ -132,11 +132,11 @@ final class AnnotatedTypeImpl<X> extends AnnotatedImpl<AnnotatedType<X>> impleme
 	}
 
 	private IllegalArgumentException noSuchMethodException(String name, Class<?>[] types) {
-		return new IllegalArgumentException(format("method not found: %s#%s(%s)", getJavaClass().getName(), name, Stream.of(types).map(Class::getName).collect(joining(", "))));
+		return new IllegalArgumentException(format("No such method: %s#%s(%s)", getJavaClass().getName(), name, Stream.of(types).map(Class::getName).collect(joining(", "))));
 	}
 
 	private IllegalArgumentException noSuchFieldException(String name) {
-		return new IllegalArgumentException(format("field not found: %s#%s", getJavaClass().getName(), name));
+		return new IllegalArgumentException(format("No such field: %s#%s", getJavaClass().getName(), name));
 	}
 
 }
